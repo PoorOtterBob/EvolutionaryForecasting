@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evolutionary-forecasting"
+version = "1.0.0"
+description = "Evolutionary Forecasting (EF): train on a short block, roll it out to any horizon (NeurIPS 2026)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+dependencies = ["torch>=1.10"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Paper = "https://arxiv.org/abs/2601.23114"
+Repository = "https://github.com/PoorOtterBob/EvolutionaryForecasting"
+
+[tool.setuptools]
+packages = ["ef"]

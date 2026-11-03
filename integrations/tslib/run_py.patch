@@ -1,0 +1,25 @@
+diff --git a/run.py b/run.py
+index 9fe7530..0e5dc31 100644
+--- a/run.py
++++ b/run.py
+@@ -37,6 +37,8 @@ if __name__ == '__main__':
+     parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')
+     parser.add_argument('--label_len', type=int, default=48, help='start token length')
+     parser.add_argument('--pred_len', type=int, default=96, help='prediction sequence length')
++    parser.add_argument('--ef_eval_horizons', type=int, nargs='+', default=None,
++                        help='Evolutionary Forecasting: evaluate the pred_len model at these horizons')
+     parser.add_argument('--seasonal_patterns', type=str, default='Monthly', help='subset for M4')
+     parser.add_argument('--inverse', action='store_true', help='inverse output data', default=False)
+ 
+@@ -177,7 +179,10 @@ if __name__ == '__main__':
+     print_args(args)
+ 
+ 
+-    if args.task_name == 'long_term_forecast':
++    if args.task_name == 'long_term_forecast' and args.ef_eval_horizons:
++        from exp.exp_ef_forecasting import Exp_EF_Forecast
++        Exp = Exp_EF_Forecast
++    elif args.task_name == 'long_term_forecast':
+         from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
+         Exp = Exp_Long_Term_Forecast
+     elif args.task_name == 'short_term_forecast':
