@@ -2,8 +2,6 @@
 
 # To See Far, Look Close: Evolutionary Forecasting for Long-term Time Series
 
-**Jiaming Ma, Siyuan Mu, Ruilin Tang, Haofeng Ma, Qihe Huang, Zhengyang Zhou, Pengkun Wang, Binwu Wang, Yang Wang**
-
 [![NeurIPS 2026](https://img.shields.io/badge/NeurIPS-2026-4b44ce.svg)](https://neurips.cc/Conferences/2026)
 [![arXiv](https://img.shields.io/badge/arXiv-2601.23114-b31b1b.svg)](https://arxiv.org/abs/2601.23114)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -11,11 +9,13 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A51.10-ee4c2c.svg)](https://pytorch.org/)
 [![TSLib](https://img.shields.io/badge/works%20with-Time--Series--Library-orange.svg)](https://github.com/thuml/Time-Series-Library)
 [![TFB](https://img.shields.io/badge/works%20with-TFB-orange.svg)](https://github.com/decisionintelligence/TFB)
+[![TSFLab](https://img.shields.io/badge/works%20with-TSFLab-orange.svg)](https://github.com/D2I-Group/TSFLab)
 
 [Paper](https://arxiv.org/abs/2601.23114) ·
 [Quick Start](#-quick-start) ·
 [Time-Series-Library](#-use-with-time-series-library) ·
 [TFB](#-use-with-tfb) ·
+[TSFLab](#-use-with-tsflab) ·
 [Results](#-results) ·
 [Citation](#-citation)
 
@@ -29,7 +29,7 @@
 
 ## 📰 News
 
-- **2026-11** Camera-ready version and the EF adapters for Time-Series-Library and TFB are released.
+- **2026-11** Camera-ready version and the EF adapters for Time-Series-Library, TFB and TSFLab (formerly ModernTSF) are released.
 - **2026-09** EF is accepted to **NeurIPS 2026** as a poster.
 - **2026-02** The preprint is available on [arXiv](https://arxiv.org/abs/2601.23114).
 
@@ -41,6 +41,7 @@
 - [Quick start](#-quick-start)
 - [Use with Time-Series-Library](#-use-with-time-series-library)
 - [Use with TFB](#-use-with-tfb)
+- [Use with TSFLab](#-use-with-tsflab)
 - [Results](#-results)
 - [Choosing the block length L](#-choosing-the-block-length-l)
 - [Repository structure](#-repository-structure)
@@ -177,6 +178,54 @@ The key difference from a standard TFB script is the pair of horizons:
 --model-hyper-params '{"horizon": 96, "seq_len": 720, ...}'  # block length L
 ```
 
+## 🧰 Use with TSFLab
+
+[TSFLab](https://github.com/D2I-Group/TSFLab) (formerly ModernTSF) discovers catalog models from `src/tsflab/models/<package>/spec.py`. EF ships as one such package. It defines a catalog model named **`EF`** that wraps any other catalog model: the base model is built with `pred_len = block_len` and rolled out to the run's `task.pred_len`.
+
+**1. Install the package into TSFLab:**
+
+```bash
+cd TSFLab
+uv pip install git+https://github.com/PoorOtterBob/EvolutionaryForecasting.git
+cp -r /path/to/EvolutionaryForecasting/integrations/tsflab/evolutionary_forecasting src/tsflab/models/
+cp /path/to/EvolutionaryForecasting/integrations/tsflab/ef_etth1.toml configs/runs/
+uv run tsf catalog show EF --params
+```
+
+**2a. One command per horizon.** `EF` trains only the first block, which is standard training at horizon `block_len`. It then evaluates the full rollout:
+
+```toml
+[model]
+name = "EF"
+
+[model.params]
+base = "PatchTST"      # any catalog model
+block_len = 96         # L
+[model.params.base_params]
+enc_in = 7             # base-model parameters; set channel widths explicitly
+
+[sweep]
+task.pred_len = [96, 192, 336, 720]   # H
+```
+
+```bash
+uv run tsf run configs/runs/ef_etth1.toml
+```
+
+**2b. Paper protocol: one model for all horizons.** Train the base model once in an ordinary TSFLab run with `task.pred_len = L`. Then evaluate its checkpoint at every `H` with `EF`. The wrapper loads the base model's checkpoint directly:
+
+```toml
+[task]
+pred_len = 720   # H
+
+[evaluation]
+checkpoint_path = "work_dirs/_runs/PatchTST-<run-id>/checkpoints/best_checkpoint.pth"   # from the pred_len = L run
+```
+
+With the same checkpoint and `pred_len = block_len`, `EF` reproduces the base model's metrics exactly.
+
+Because every run goes through TSFLab's own data splits, metrics and run records, EF results sit next to all other catalog models on the same leaderboard.
+
 ## 📈 Results
 
 EF is evaluated with eight DF backbones: DLinear, PatchTST, iTransformer, TimeMixer, SparseTSF, TimeBase, TimeBridge and TimeEmb. The datasets are ETTh1, ETTh2, Exchange, Weather, Traffic and ILI, over all `(T, L, H)` combinations.
@@ -217,8 +266,9 @@ ef/
 integrations/
   tslib/                  # Exp_EF_Forecast + run.py patch for Time-Series-Library
   tfb/run_ef_tfb.sh       # EF runs on TFB (configuration only)
+  tsflab/                 # EF catalog model package + example run config for TSFLab
 examples/quickstart.py    # toy DF-vs-EF comparison
-tests/test_ef.py          # definition and paper-equivalence tests
+tests/                    # definition, paper-equivalence and TSFLab checkpoint tests
 ```
 
 ## 📝 Citation

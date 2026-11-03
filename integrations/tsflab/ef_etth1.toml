@@ -1,0 +1,26 @@
+# EF on TSFLab: one PatchTST trained with block length L = 96, evaluated at every horizon.
+# Copy to TSFLab/configs/runs/ and run: uv run tsf run configs/runs/ef_etth1.toml
+extends = ["../base.toml", "../datasets/etth1.toml"]
+
+[experiment]
+description = "EF (PatchTST, L=96) on ETTh1"
+
+[task]
+mode = "time_series"
+seq_len = 720
+label_len = 0
+pred_len = 96
+features = "M"
+
+[model]
+name = "EF"
+
+[model.params]
+base = "PatchTST"
+block_len = 96
+
+[model.params.base_params]
+enc_in = 7
+
+[sweep]
+task.pred_len = [96, 192, 336, 720]
